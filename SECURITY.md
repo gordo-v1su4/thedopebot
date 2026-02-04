@@ -28,7 +28,7 @@ fi
 
 ```bash
 docker run -e ANTHROPIC_API_KEY="sk-ant-xxxxx" \
-           -e GITHUB_TOKEN="ghp_xxxxx" \
+           -e GH_TOKEN="ghp_xxxxx" \
            -e REPO_URL="https://github.com/user/repo" \
            -e BRANCH="main" \
            thepopebot
@@ -45,7 +45,7 @@ jobs:
         run: |
           docker run \
             -e ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
-            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e GH_TOKEN=${{ secrets.GH_TOKEN }} \
             -e REPO_URL=${{ github.server_url }}/${{ github.repository }} \
             -e BRANCH=${{ github.ref_name }} \
             thepopebot
@@ -78,7 +78,7 @@ Keep `auth.json` outside the repository and mount it as a read-only volume.
 
 ```bash
 docker run -v ~/.thepopebot-secrets/auth.json:/job/auth.json:ro \
-           -e GITHUB_TOKEN="ghp_xxxxx" \
+           -e GH_TOKEN="ghp_xxxxx" \
            -e REPO_URL="https://github.com/user/repo" \
            -e BRANCH="main" \
            thepopebot
@@ -121,7 +121,7 @@ if [ -f /run/secrets/anthropic_key ]; then
 fi
 
 if [ -f /run/secrets/github_token ]; then
-  GITHUB_TOKEN=$(cat /run/secrets/github_token)
+  GH_TOKEN=$(cat /run/secrets/github_token)
 fi
 
 # Generate auth.json

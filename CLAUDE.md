@@ -122,9 +122,9 @@ The Event Handler is a Node.js Express server that provides orchestration capabi
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `API_KEY` | Authentication key for /webhook endpoint | Yes |
-| `GITHUB_TOKEN` | GitHub PAT for creating branches/files | Yes |
-| `GITHUB_OWNER` | GitHub repository owner | Yes |
-| `GITHUB_REPO` | GitHub repository name | Yes |
+| `GH_TOKEN` | GitHub PAT for creating branches/files | Yes |
+| `GH_OWNER` | GitHub repository owner | Yes |
+| `GH_REPO` | GitHub repository name | Yes |
 | `PORT` | Server port (default: 3000) | No |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token from BotFather | For Telegram |
 | `TELEGRAM_WEBHOOK_SECRET` | Secret for webhook validation | No |

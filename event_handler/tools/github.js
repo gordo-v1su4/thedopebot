@@ -1,4 +1,4 @@
-const { GITHUB_TOKEN } = process.env;
+const { GH_TOKEN } = process.env;
 
 /**
  * GitHub REST API helper with authentication
@@ -10,7 +10,7 @@ async function githubApi(endpoint, options = {}) {
   const res = await fetch(`https://api.github.com${endpoint}`, {
     ...options,
     headers: {
-      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Authorization': `Bearer ${GH_TOKEN}`,
       'Accept': 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
       ...options.headers,

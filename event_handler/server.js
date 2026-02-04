@@ -18,7 +18,7 @@ const app = express();
 app.use(helmet());
 app.use(express.json());
 
-const { API_KEY, TELEGRAM_WEBHOOK_SECRET, TELEGRAM_BOT_TOKEN, GH_WEBHOOK_TOKEN, GITHUB_OWNER, GITHUB_REPO } = process.env;
+const { API_KEY, TELEGRAM_WEBHOOK_SECRET, TELEGRAM_BOT_TOKEN, GH_WEBHOOK_TOKEN, GH_OWNER, GH_REPO } = process.env;
 
 // Bot token from env, can be overridden by /telegram/register
 let telegramBotToken = TELEGRAM_BOT_TOKEN || null;
@@ -130,7 +130,7 @@ function extractJobId(branchName) {
 async function getCommitMessage(prNumber) {
   try {
     const commits = await githubApi(
-      `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls/${prNumber}/commits`
+      `/repos/${GH_OWNER}/${GH_REPO}/pulls/${prNumber}/commits`
     );
     return commits[commits.length - 1]?.commit?.message || null;
   } catch (err) {
@@ -147,7 +147,7 @@ async function getCommitMessage(prNumber) {
 async function getJobDescription(branchRef) {
   try {
     const file = await githubApi(
-      `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/workspace/job.md?ref=${branchRef}`
+      `/repos/${GH_OWNER}/${GH_REPO}/contents/workspace/job.md?ref=${branchRef}`
     );
     return Buffer.from(file.content, 'base64').toString('utf-8');
   } catch (err) {
@@ -241,7 +241,7 @@ async function analyzeJobLog(branchRef, jobId, context = {}) {
     let logFiles;
     try {
       logFiles = await githubApi(
-        `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${logsPath}?ref=${branchRef}`
+        `/repos/${GH_OWNER}/${GH_REPO}/contents/${logsPath}?ref=${branchRef}`
       );
     } catch (err) {
       // Logs directory might not exist
@@ -256,7 +256,7 @@ async function analyzeJobLog(branchRef, jobId, context = {}) {
 
     // Fetch the log file content
     const fileData = await githubApi(
-      `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${logFile.path}?ref=${branchRef}`
+      `/repos/${GH_OWNER}/${GH_REPO}/contents/${logFile.path}?ref=${branchRef}`
     );
     const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
 

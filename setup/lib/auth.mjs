@@ -128,11 +128,11 @@ export function writeEnvFile(config) {
 API_KEY=${apiKey}
 
 # GitHub Personal Access Token (needs repo, workflow scopes)
-GITHUB_TOKEN=${githubToken}
+GH_TOKEN=${githubToken}
 
 # Repository info
-GITHUB_OWNER=${githubOwner}
-GITHUB_REPO=${githubRepo}
+GH_OWNER=${githubOwner}
+GH_REPO=${githubRepo}
 
 # Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN=${telegramBotToken || ''}
