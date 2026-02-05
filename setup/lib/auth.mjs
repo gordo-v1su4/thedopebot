@@ -79,6 +79,7 @@ export function writeEnvFile(config) {
     telegramBotToken,
     ghWebhookToken,
     anthropicApiKey,
+    openaiApiKey,
   } = config;
 
   const envContent = `# Event Handler Configuration
@@ -102,6 +103,9 @@ GH_WEBHOOK_TOKEN=${ghWebhookToken}
 
 # Anthropic API key for Claude chat features
 ANTHROPIC_API_KEY=${anthropicApiKey}
+
+# OpenAI API key for Whisper voice transcription (optional)
+OPENAI_API_KEY=${openaiApiKey || ''}
 `;
 
   const envPath = join(ROOT_DIR, 'event_handler', '.env');

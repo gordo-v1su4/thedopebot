@@ -327,6 +327,7 @@ async function main() {
     telegramBotToken: telegramToken,
     ghWebhookToken: webhookToken,
     anthropicApiKey: anthropicKey,
+    openaiApiKey: openaiKey,
   });
   printSuccess(`Created ${envPath}`);
 

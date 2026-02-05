@@ -6,7 +6,8 @@ require('dotenv').config();
 
 const { createJob } = require('./tools/create-job');
 const { loadCrons } = require('./cron');
-const { setWebhook, sendMessage, formatJobNotification } = require('./tools/telegram');
+const { setWebhook, sendMessage, formatJobNotification, downloadFile } = require('./tools/telegram');
+const { isWhisperEnabled, transcribeAudio } = require('./tools/openai');
 const { chat } = require('./claude');
 const { toolDefinitions, toolExecutors } = require('./claude/tools');
 const { getHistory, updateHistory } = require('./claude/conversation');
@@ -95,27 +96,51 @@ app.post('/telegram/webhook', async (req, res) => {
   const update = req.body;
   const message = update.message || update.edited_message;
 
-  if (message && message.text && message.chat && telegramBotToken) {
+  if (message && message.chat && telegramBotToken) {
     const chatId = String(message.chat.id);
     lastChatId = chatId;
 
-    try {
-      // Get conversation history and process with Claude
-      const history = getHistory(chatId);
-      const { response, history: newHistory } = await chat(
-        message.text,
-        history,
-        toolDefinitions,
-        toolExecutors
-      );
-      updateHistory(chatId, newHistory);
+    let messageText = null;
 
-      // Send response (auto-splits if needed)
-      console.log('[TELEGRAM] Sending:', response.slice(0, 200));
-      await sendMessage(telegramBotToken, chatId, response);
-    } catch (err) {
-      console.error('Failed to process message with Claude:', err);
-      await sendMessage(telegramBotToken, chatId, 'Sorry, I encountered an error processing your message.').catch(() => {});
+    if (message.text) {
+      messageText = message.text;
+    } else if (message.voice) {
+      // Handle voice messages
+      if (!isWhisperEnabled()) {
+        await sendMessage(telegramBotToken, chatId, 'Voice messages are not supported. Please set OPENAI_API_KEY to enable transcription.');
+        return res.status(200).json({ ok: true });
+      }
+
+      try {
+        const { buffer, filename } = await downloadFile(telegramBotToken, message.voice.file_id);
+        messageText = await transcribeAudio(buffer, filename);
+        console.log('[TELEGRAM] Transcribed voice:', messageText.slice(0, 100));
+      } catch (err) {
+        console.error('Failed to transcribe voice:', err);
+        await sendMessage(telegramBotToken, chatId, 'Sorry, I could not transcribe your voice message.');
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    if (messageText) {
+      try {
+        // Get conversation history and process with Claude
+        const history = getHistory(chatId);
+        const { response, history: newHistory } = await chat(
+          messageText,
+          history,
+          toolDefinitions,
+          toolExecutors
+        );
+        updateHistory(chatId, newHistory);
+
+        // Send response (auto-splits if needed)
+        console.log('[TELEGRAM] Sending:', response.slice(0, 200));
+        await sendMessage(telegramBotToken, chatId, response);
+      } catch (err) {
+        console.error('Failed to process message with Claude:', err);
+        await sendMessage(telegramBotToken, chatId, 'Sorry, I encountered an error processing your message.').catch(() => {});
+      }
     }
   }
 

@@ -135,6 +135,34 @@ ${escapeHtml(summary)}
 <a href="${prUrl}">View PR</a>`;
 }
 
+/**
+ * Download a file from Telegram servers
+ * @param {string} botToken - Bot token from @BotFather
+ * @param {string} fileId - Telegram file_id
+ * @returns {Promise<{buffer: Buffer, filename: string}>}
+ */
+async function downloadFile(botToken, fileId) {
+  // Get file path from Telegram
+  const fileInfoRes = await fetch(
+    `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`
+  );
+  const fileInfo = await fileInfoRes.json();
+  if (!fileInfo.ok) {
+    throw new Error(`Telegram API error: ${fileInfo.description}`);
+  }
+
+  const filePath = fileInfo.result.file_path;
+
+  // Download file
+  const fileRes = await fetch(
+    `https://api.telegram.org/file/bot${botToken}/${filePath}`
+  );
+  const buffer = Buffer.from(await fileRes.arrayBuffer());
+  const filename = filePath.split('/').pop();
+
+  return { buffer, filename };
+}
+
 module.exports = {
   getBot,
   setWebhook,
@@ -142,4 +170,5 @@ module.exports = {
   smartSplit,
   escapeHtml,
   formatJobNotification,
+  downloadFile,
 };
