@@ -8,9 +8,6 @@ require('dotenv').config();
 const execAsync = promisify(exec);
 const { createJob } = require('./tools/create-job');
 
-// Project root directory (parent of event_handler)
-const PROJECT_ROOT = path.join(__dirname, '..');
-
 /**
  * Load and schedule crons from CRONS.json
  * @returns {Array} - Array of scheduled cron tasks
@@ -40,7 +37,7 @@ function loadCrons() {
     const task = cron.schedule(schedule, async () => {
       try {
         if (type === 'command') {
-          const { stdout, stderr } = await execAsync(command, { cwd: PROJECT_ROOT });
+          const { stdout, stderr } = await execAsync(command);
           const output = (stdout || stderr || '').trim();
           console.log(`[CRON] ${name}: ${output || 'ran'}`);
         } else {

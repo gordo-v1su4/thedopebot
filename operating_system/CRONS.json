@@ -12,12 +12,5 @@
     "type": "command",
     "command": "echo \"pong!\"",
     "enabled": true
-  },
-  {
-    "name": "daily-weather",
-    "schedule": "0 5 * * *",
-    "type": "command",
-    "command": "node event_handler/tools/weather.js",
-    "enabled": true
   }
 ]
