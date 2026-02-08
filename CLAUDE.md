@@ -159,6 +159,14 @@ Creates a full Docker Agent job via `createJob()`. This pushes a `job/*` branch 
 }
 ```
 
+**Best practice:** Keep the `job` field short. Put detailed task instructions in a dedicated markdown file in `operating_system/` and reference it by path:
+
+```json
+"job": "Read the file at operating_system/MY_TASK.md and complete the tasks described there."
+```
+
+This keeps CRONS.json clean and makes instructions easier to read and edit. Avoid writing long multi-line job descriptions inline.
+
 #### Type: `command`
 
 Runs a shell command directly on the event handler server. No Docker container, no GitHub branch, no LLM. Commands execute with `event_handler/cron/` as the working directory — put any scripts or files needed by cron commands there.
