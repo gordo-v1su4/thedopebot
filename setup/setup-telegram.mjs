@@ -4,8 +4,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
 import { checkPrerequisites } from './lib/prerequisites.mjs';
 import { setVariables } from './lib/github.mjs';
@@ -14,26 +13,25 @@ import { confirm, generateTelegramWebhookSecret } from './lib/prompts.mjs';
 import { updateEnvVariable } from './lib/auth.mjs';
 import { runVerificationFlow } from './lib/telegram-verify.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = join(__dirname, '..');
+const ROOT_DIR = process.cwd();
 
 function printSuccess(message) {
-  console.log(chalk.green('  ✓ ') + message);
+  console.log(chalk.green('  \u2713 ') + message);
 }
 
 function printWarning(message) {
-  console.log(chalk.yellow('  ⚠ ') + message);
+  console.log(chalk.yellow('  \u26a0 ') + message);
 }
 
 function printInfo(message) {
-  console.log(chalk.dim('  → ') + message);
+  console.log(chalk.dim('  \u2192 ') + message);
 }
 
 /**
  * Parse .env file and return object
  */
 function loadEnvFile() {
-  const envPath = join(ROOT_DIR, 'event_handler', '.env');
+  const envPath = join(ROOT_DIR, '.env');
   if (!existsSync(envPath)) {
     return null;
   }
@@ -67,8 +65,8 @@ async function main() {
   const env = loadEnvFile();
 
   // Get ngrok URL first (verify server is up)
-  console.log(chalk.yellow('\n  Make sure both terminals are running:\n'));
-  console.log(chalk.dim('  Terminal 1: ') + chalk.cyan('cd event_handler && npm start'));
+  console.log(chalk.yellow('\n  Make sure your server is running:\n'));
+  console.log(chalk.dim('  Terminal 1: ') + chalk.cyan('npm run dev'));
   console.log(chalk.dim('  Terminal 2: ') + chalk.cyan('ngrok http 3000\n'));
 
   let ngrokUrl = null;
@@ -92,7 +90,7 @@ async function main() {
     const healthSpinner = ora('Verifying server is reachable...').start();
     const apiKey = env?.API_KEY;
     try {
-      const response = await fetch(`${testUrl}/ping`, {
+      const response = await fetch(`${testUrl}/api/ping`, {
         method: 'GET',
         headers: apiKey ? { 'x-api-key': apiKey } : {},
         signal: AbortSignal.timeout(10000)
@@ -118,7 +116,7 @@ async function main() {
         }
       } else {
         healthSpinner.fail(`Server returned status ${response.status}`);
-        printWarning('Make sure the event handler server is running');
+        printWarning('Make sure the server is running (npm run dev)');
         const retry = await confirm('Try again?');
         if (!retry) {
           ngrokUrl = testUrl;
@@ -195,7 +193,7 @@ async function main() {
   }
 
   // Register Telegram webhook
-  const webhookUrl = `${ngrokUrl}/telegram/webhook`;
+  const webhookUrl = `${ngrokUrl}/api/telegram/webhook`;
   const tgSpinner = ora('Registering Telegram webhook...').start();
   const tgResult = await setTelegramWebhook(token, webhookUrl, webhookSecret);
   if (tgResult.ok) {
@@ -223,7 +221,7 @@ async function main() {
       updateEnvVariable('TELEGRAM_CHAT_ID', chatId);
       printSuccess(`Chat ID saved: ${chatId}`);
     } else {
-      printWarning('Chat ID is required — the bot will not respond without it.');
+      printWarning('Chat ID is required \u2014 the bot will not respond without it.');
       printInfo('Run npm run setup-telegram again to complete setup.');
     }
   }

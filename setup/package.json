@@ -2,15 +2,5 @@
   "name": "thepopebot-setup",
   "version": "1.0.0",
   "type": "module",
-  "description": "Interactive setup wizard for thepopebot",
-  "main": "setup.mjs",
-  "scripts": {
-    "setup": "node setup.mjs"
-  },
-  "dependencies": {
-    "chalk": "^5.3.0",
-    "inquirer": "^9.2.12",
-    "open": "^10.0.0",
-    "ora": "^8.0.1"
-  }
+  "private": true
 }

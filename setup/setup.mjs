@@ -57,19 +57,19 @@ function printStep(step, total, title) {
 }
 
 function printSuccess(message) {
-  console.log(chalk.green('  ✓ ') + message);
+  console.log(chalk.green('  \u2713 ') + message);
 }
 
 function printWarning(message) {
-  console.log(chalk.yellow('  ⚠ ') + message);
+  console.log(chalk.yellow('  \u26a0 ') + message);
 }
 
 function printError(message) {
-  console.log(chalk.red('  ✗ ') + message);
+  console.log(chalk.red('  \u2717 ') + message);
 }
 
 function printInfo(message) {
-  console.log(chalk.dim('  → ') + message);
+  console.log(chalk.dim('  \u2192 ') + message);
 }
 
 async function main() {
@@ -90,9 +90,7 @@ async function main() {
   let owner = null;
   let repo = null;
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 1: Prerequisites Check
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'Checking prerequisites');
 
   const spinner = ora('Checking system requirements...').start();
@@ -183,16 +181,14 @@ async function main() {
     printInfo('Install with: brew install ngrok/ngrok/ngrok');
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 2: GitHub PAT
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'GitHub Personal Access Token');
 
   console.log(chalk.dim('  Create a fine-grained PAT with these repository permissions:\n'));
-  console.log(chalk.dim('    • Actions: Read-only'));
-  console.log(chalk.dim('    • Contents: Read and write'));
-  console.log(chalk.dim('    • Metadata: Read-only (required, auto-selected)'));
-  console.log(chalk.dim('    • Pull requests: Read and write\n'));
+  console.log(chalk.dim('    \u2022 Actions: Read-only'));
+  console.log(chalk.dim('    \u2022 Contents: Read and write'));
+  console.log(chalk.dim('    \u2022 Metadata: Read-only (required, auto-selected)'));
+  console.log(chalk.dim('    \u2022 Pull requests: Read and write\n'));
 
   const openPATPage = await confirm('Open GitHub PAT creation page in browser?');
   if (openPATPage) {
@@ -227,9 +223,7 @@ async function main() {
     patValid = true;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 3: API Keys
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'API Keys');
 
   console.log(chalk.dim('  Anthropic API key is required. Others are optional.\n'));
@@ -281,9 +275,7 @@ async function main() {
     brave: braveKey,
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 4: Set GitHub Secrets
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'Set GitHub Secrets');
 
   if (!owner || !repo) {
@@ -344,9 +336,7 @@ async function main() {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 5: Telegram Setup
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'Telegram Setup');
 
   telegramToken = await promptForTelegramToken();
@@ -366,9 +356,7 @@ async function main() {
     printInfo('Skipped Telegram setup');
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Write .env file for event_handler
-  // ─────────────────────────────────────────────────────────────────────────────
+  // Write .env file (now at project root, not event_handler/)
   const apiKey = generateWebhookSecret().slice(0, 32); // Random API key for webhook endpoint
   const telegramVerification = telegramToken ? generateVerificationCode() : null;
   const envPath = writeEnvFile({
@@ -386,15 +374,13 @@ async function main() {
   });
   printSuccess(`Created ${envPath}`);
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 6: Start Server & ngrok
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'Start Server & ngrok');
 
   console.log(chalk.bold('  Now we need to start the server and expose it via ngrok.\n'));
   console.log(chalk.yellow('  Open TWO new terminal windows and run:\n'));
   console.log(chalk.bold('  Terminal 1:'));
-  console.log(chalk.cyan('     cd event_handler && npm install && npm run dev\n'));
+  console.log(chalk.cyan('     npm run dev\n'));
   console.log(chalk.bold('  Terminal 2:'));
   console.log(chalk.cyan('     ngrok http 3000\n'));
 
@@ -422,7 +408,7 @@ async function main() {
     // Verify the server is reachable through ngrok
     const healthSpinner = ora('Verifying server is reachable...').start();
     try {
-      const response = await fetch(`${testUrl}/ping`, {
+      const response = await fetch(`${testUrl}/api/ping`, {
         method: 'GET',
         headers: { 'x-api-key': apiKey },
         signal: AbortSignal.timeout(10000)
@@ -448,14 +434,14 @@ async function main() {
         console.log(chalk.bold('  To fix this, restart your server:\n'));
         console.log(chalk.cyan('    1. Go to Terminal 1 (where the server is running)'));
         console.log(chalk.cyan('    2. Press Ctrl+C to stop it'));
-        console.log(chalk.cyan('    3. Run: npm start\n'));
+        console.log(chalk.cyan('    3. Run: npm run dev\n'));
         const retry = await confirm('Retry after restarting the server?');
         if (!retry) {
           ngrokUrl = testUrl;
         }
       } else {
         healthSpinner.fail(`Server returned status ${response.status}`);
-        printWarning('Make sure the event handler server is running (cd event_handler && npm start)');
+        printWarning('Make sure the server is running (npm run dev)');
         const retry = await confirm('Try again?');
         if (!retry) {
           ngrokUrl = testUrl;
@@ -464,7 +450,7 @@ async function main() {
     } catch (error) {
       healthSpinner.fail(`Could not reach server: ${error.message}`);
       printWarning('Make sure both the server AND ngrok are running');
-      printInfo('Terminal 1: cd event_handler && npm install && npm start');
+      printInfo('Terminal 1: npm run dev');
       printInfo('Terminal 2: ngrok http 3000');
       const retry = await confirm('Try again?');
       if (!retry) {
@@ -484,7 +470,7 @@ async function main() {
 
   // Register Telegram webhook if configured
   if (telegramToken) {
-    const webhookUrl = `${ngrokUrl}/telegram/webhook`;
+    const webhookUrl = `${ngrokUrl}/api/telegram/webhook`;
     const tgSpinner = ora('Registering Telegram webhook...').start();
     const tgResult = await setTelegramWebhook(telegramToken, webhookUrl, telegramWebhookSecret);
     if (tgResult.ok) {
@@ -507,14 +493,12 @@ async function main() {
         printWarning('Could not verify bot. Check your configuration.');
       }
     } else {
-      printWarning('Chat ID is required — the bot will not respond without it.');
+      printWarning('Chat ID is required \u2014 the bot will not respond without it.');
       printInfo('Run npm run setup-telegram to complete setup.');
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // Step 7: Summary
-  // ─────────────────────────────────────────────────────────────────────────────
   printStep(++currentStep, TOTAL_STEPS, 'Setup Complete!');
 
   console.log(chalk.bold.green('\n  Configuration Summary:\n'));
@@ -529,22 +513,22 @@ async function main() {
   if (telegramToken) console.log(`  ${chalk.dim('Telegram Bot:')}    Webhook registered`);
 
   console.log(chalk.bold('\n  GitHub Secrets Set:\n'));
-  console.log('  • SECRETS');
-  if (llmSecretsBase64) console.log('  • LLM_SECRETS');
-  console.log('  • GH_WEBHOOK_SECRET');
+  console.log('  \u2022 SECRETS');
+  if (llmSecretsBase64) console.log('  \u2022 LLM_SECRETS');
+  console.log('  \u2022 GH_WEBHOOK_SECRET');
 
   console.log(chalk.bold('\n  GitHub Variables Set:\n'));
-  console.log('  • GH_WEBHOOK_URL');
-  console.log('  • AUTO_MERGE = true');
-  console.log('  • ALLOWED_PATHS = /logs');
-  console.log('  • MODEL = claude-sonnet-4-5-20250929');
+  console.log('  \u2022 GH_WEBHOOK_URL');
+  console.log('  \u2022 AUTO_MERGE = true');
+  console.log('  \u2022 ALLOWED_PATHS = /logs');
+  console.log('  \u2022 MODEL = claude-sonnet-4-5-20250929');
 
   console.log(chalk.bold.green('\n  You\'re all set!\n'));
 
   if (telegramToken) {
     console.log(chalk.cyan('  Message your Telegram bot to create your first job!'));
   } else {
-    console.log(chalk.dim('  Use the /webhook endpoint to create jobs.'));
+    console.log(chalk.dim('  Use the /api/webhook endpoint to create jobs.'));
   }
 
   console.log('\n');

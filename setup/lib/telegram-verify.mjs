@@ -40,7 +40,7 @@ export async function verifyRestart(ngrokUrl, apiKey) {
 
   // Verify server is up
   try {
-    const response = await fetch(`${ngrokUrl}/ping`, {
+    const response = await fetch(`${ngrokUrl}/api/ping`, {
       method: 'GET',
       headers: { 'x-api-key': apiKey },
       signal: AbortSignal.timeout(10000)
