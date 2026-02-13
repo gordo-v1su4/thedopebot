@@ -2,7 +2,7 @@
 set -e
 
 PACKAGE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-DEV_DIR="${1:-/tmp/local.thepopebot}"
+DEV_DIR="${1:-/tmp/thepopebot.local}"
 ENV_BACKUP="/tmp/env.$(uuidgen)"
 
 HAS_ENV=false
