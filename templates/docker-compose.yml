@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   event_handler:
-    image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot-event-handler:latest}
+    image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION:-latest}}
     volumes:
       - ./.env:/app/.env
       - ./config:/app/config

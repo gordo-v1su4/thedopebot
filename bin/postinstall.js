@@ -38,6 +38,23 @@ function walk(dir) {
   return files;
 }
 
+// Write THEPOPEBOT_VERSION to .env so docker-compose can pin the image tag
+const envPath = path.join(projectRoot, '.env');
+if (fs.existsSync(envPath)) {
+  const ownPkgPath = path.join(__dirname, '..', 'package.json');
+  try {
+    const ownPkg = JSON.parse(fs.readFileSync(ownPkgPath, 'utf8'));
+    const version = ownPkg.version;
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    if (envContent.match(/^THEPOPEBOT_VERSION=.*/m)) {
+      envContent = envContent.replace(/^THEPOPEBOT_VERSION=.*/m, `THEPOPEBOT_VERSION=${version}`);
+    } else {
+      envContent = envContent.trimEnd() + `\nTHEPOPEBOT_VERSION=${version}\n`;
+    }
+    fs.writeFileSync(envPath, envContent);
+  } catch {}
+}
+
 const changed = [];
 for (const relPath of walk(templatesDir)) {
   const src = path.join(templatesDir, relPath);

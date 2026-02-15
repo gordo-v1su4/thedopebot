@@ -43,7 +43,7 @@ jobs:
           if [ -n "$JOB_IMAGE_URL" ]; then
             IMAGE="${JOB_IMAGE_URL}:latest"
           else
-            IMAGE="stephengpope/thepopebot:${THEPOPEBOT_VERSION}"
+            IMAGE="stephengpope/thepopebot:job-${THEPOPEBOT_VERSION}"
           fi
           echo "Using image: $IMAGE"
           docker run --rm \
