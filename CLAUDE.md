@@ -430,17 +430,21 @@ GitHub Actions are scaffolded into the user's project (from `templates/.github/w
 
 ### rebuild-event-handler.yml
 
-Triggers on push to `main`. Runs on the self-hosted runner and uses `docker exec` to pull changes, rebuild, and reload Next.js inside the event handler container via PM2. Skips rebuild for logs-only changes.
+Triggers on push to `main`. Runs on the self-hosted runner. Skips rebuild for logs-only changes. Has two paths based on whether the thepopebot package version changed:
+
+- **Fast rebuild** (no version change): `npm install --omit=dev` → build `.next-new` → swap → PM2 reload. Standard path for normal code pushes.
+- **Docker restart** (version changed): Detects version change by comparing thepopebot version in `package-lock.json` before and after pull. Runs `npx thepopebot init` to scaffold new templates, commits any changes back to main, updates `THEPOPEBOT_VERSION` in `.env`, then `docker compose pull` + `up -d` to restart the container with the new image, followed by `npm install --omit=dev` → build → swap → PM2 reload inside the new container.
 
 ### upgrade-event-handler.yml
 
-Triggers via manual `workflow_dispatch`. Upgrades the thepopebot package and restarts the event handler container with the new image. Uses a three-phase approach:
+Triggers via manual `workflow_dispatch`. Only upgrades the thepopebot package — does not build, restart containers, or run `thepopebot init`. Works in an isolated clone (temp directory) so the live `/app` is never modified directly.
 
-1. **Phase 1** (inside old container): Git pull, `npm update thepopebot`, `npx thepopebot init`, `npm install --omit=dev`, build `.next-new` (old `.next` keeps serving)
-2. **Phase 2** (from runner): `docker compose pull event-handler` + `docker compose up -d event-handler` (recreates container with new image tag from updated `.env`)
-3. **Phase 3** (inside new container): Swap `.next-new` → `.next`, PM2 reload
+1. Clones the repo to a temp directory
+2. Runs `npm install` + `npm update thepopebot`
+3. If changes exist → creates `upgrade/thepopebot-<version>-<timestamp>` branch, opens PR, enables auto-merge with `--delete-branch`
+4. PR merge to main triggers `rebuild-event-handler.yml`, which handles the version change (init, .env update, docker restart)
 
-This ensures `THEPOPEBOT_VERSION` in `.env` stays in sync with the running container image. The runner service has a read-only volume mount (`.:/project:ro`) to access `docker-compose.yml` and `.env` for the pull/restart step.
+The runner service has a read-only volume mount (`.:/project:ro`) to access `docker-compose.yml` and `.env` for the pull/restart step in `rebuild-event-handler.yml`.
 
 ### build-image.yml
 

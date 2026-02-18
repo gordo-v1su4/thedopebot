@@ -13,32 +13,31 @@ jobs:
     steps:
       - name: Upgrade thepopebot
         run: |
-          # Phase 1: Update package and build (but don't swap yet)
           docker exec thepopebot-event-handler bash -c '
             export GH_TOKEN=$(grep "^GH_TOKEN=" /app/.env | cut -d= -f2-)
             echo "${GH_TOKEN}" | gh auth login --with-token
             gh auth setup-git
 
-            git fetch origin main
-            git reset --hard origin/main
+            REPO_URL=$(git -C /app remote get-url origin)
+            WORK_DIR=$(mktemp -d)
+            git clone --depth 1 "$REPO_URL" "$WORK_DIR"
+            cd "$WORK_DIR"
 
+            npm install
             npm update thepopebot
-            npx thepopebot init
-            npm install --omit=dev
 
-            rm -rf .next-new
-            NEXT_BUILD_DIR=.next-new npm run build
-          '
+            git add -A
+            if ! git diff --cached --quiet; then
+              VERSION=$(node -p "require('./node_modules/thepopebot/package.json').version")
+              BRANCH="upgrade/thepopebot-${VERSION}-$(date +%s)"
+              git checkout -b "$BRANCH"
+              git commit -m "chore: upgrade thepopebot"
+              git push origin "$BRANCH"
+              gh pr create --title "chore: upgrade thepopebot" --body "Automated upgrade via upgrade-event-handler workflow." --base main --head "$BRANCH"
+              gh pr merge "$BRANCH" --squash --auto --delete-branch
+            else
+              echo "No changes — thepopebot is already up to date."
+            fi
 
-          # Phase 2: Pull new image and restart container
-          cd /project
-          docker compose pull event-handler
-          docker compose up -d event-handler
-
-          # Phase 3: Swap build and reload inside new container
-          docker exec thepopebot-event-handler bash -c '
-            mv .next .next-old 2>/dev/null || true
-            mv .next-new .next
-            npx pm2 reload all
-            rm -rf .next-old
+            rm -rf "$WORK_DIR"
           '
