@@ -33,7 +33,7 @@
     "build": "esbuild lib/chat/components/*.jsx lib/chat/components/**/*.jsx --outdir=lib/chat/components --format=esm --jsx=automatic --outbase=lib/chat/components",
     "prepublishOnly": "npm run build",
     "local": "bash bin/local.sh",
-    "postinstall": "if [ -f bin/postinstall.js ]; then node bin/postinstall.js; fi",
+    "postinstall": "node bin/postinstall.js",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "test": "echo \"No tests yet\" && exit 0"
