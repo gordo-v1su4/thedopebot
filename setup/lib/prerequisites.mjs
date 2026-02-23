@@ -11,6 +11,14 @@ function commandExists(cmd) {
     execSync(`which ${cmd}`, { stdio: 'ignore' });
     return true;
   } catch {
+    if (process.platform === 'win32') {
+      try {
+        execSync(`where ${cmd}`, { stdio: 'ignore' });
+        return true;
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 }
