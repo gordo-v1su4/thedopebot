@@ -270,85 +270,11 @@ See [docs/SECURITY.md](docs/SECURITY.md) for full details on what's exposed, the
 
 ---
 
-## Running Different Models Per Job
+## Running Different Models
 
-Every job your agent runs can use a different LLM. Use Claude for one cron, GPT-4o for another, or a local Ollama model for a third — just set `llm_provider` and `llm_model` on the entry.
+The Event Handler (chat, Telegram, webhooks) and Jobs (Docker agent) are two independent layers — each can run a different LLM. Use Claude for interactive chat and a cheaper or local model for long-running jobs, mix providers per cron entry, or run everything on a single model.
 
-### Per-job overrides
-
-Add `llm_provider` and `llm_model` to any agent-type entry in `config/CRONS.json` or any action in `config/TRIGGERS.json`. This overrides the default for just that one job:
-
-```json
-{
-  "name": "Code review",
-  "schedule": "0 9 * * 1",
-  "type": "agent",
-  "job": "Review open PRs and leave comments",
-  "llm_provider": "openai",
-  "llm_model": "gpt-4o"
-}
-```
-
-The matching API key must already exist as a GitHub secret (see the table below).
-
-> **Using `custom` on individual crons:** `llm_provider` and `llm_model` travel with the job, but `OPENAI_BASE_URL`, `RUNS_ON`, and `CUSTOM_API_KEY` are repo-level settings — they must be set as GitHub variables/secrets even if your default provider is something else. See [Using the `custom` provider](#using-the-custom-provider) below.
-
-### Providers
-
-| Provider | What it is | Example model | GitHub secret needed |
-|----------|------------|---------------|----------------------|
-| `anthropic` | Anthropic (default) | `claude-sonnet-4-20250514` | `AGENT_ANTHROPIC_API_KEY` |
-| `openai` | OpenAI | `gpt-4o` | `AGENT_OPENAI_API_KEY` |
-| `google` | Google Gemini | `gemini-2.5-pro` | `AGENT_GOOGLE_API_KEY` |
-| `custom` | Any OpenAI-compatible API (DeepSeek, Ollama, Together AI, etc.) | `deepseek-chat` | `AGENT_CUSTOM_API_KEY` *(if required — see below)* |
-
-### Changing the default for all jobs
-
-If you want every job to use the same non-Anthropic model, set `LLM_PROVIDER` and `LLM_MODEL` as GitHub repo variables:
-
-```bash
-npx thepopebot set-var LLM_PROVIDER openai
-npx thepopebot set-var LLM_MODEL gpt-4o
-```
-
-Per-job overrides in `CRONS.json` and `TRIGGERS.json` still take priority over these defaults.
-
-### Using the `custom` provider
-
-`custom` means "any server that speaks the OpenAI chat-completions API." This covers two cases: cloud APIs and local models.
-
-#### Cloud custom (DeepSeek, Together AI, Fireworks, etc.)
-
-Point at the provider's endpoint and add your API key:
-
-```bash
-npx thepopebot set-var LLM_PROVIDER custom
-npx thepopebot set-var LLM_MODEL deepseek-chat
-npx thepopebot set-var OPENAI_BASE_URL https://api.deepseek.com/v1
-```
-
-Then set the API key as a GitHub secret:
-
-```bash
-npx thepopebot set-agent-secret CUSTOM_API_KEY sk-...
-```
-
-Cloud custom APIs are reachable from any runner — no other changes needed.
-
-#### Local custom (Ollama, LM Studio, vLLM, etc.)
-
-For a model running on your own machine you need a [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners) so the job executes on your hardware:
-
-```bash
-npx thepopebot set-var RUNS_ON self-hosted
-npx thepopebot set-var LLM_PROVIDER custom
-npx thepopebot set-var LLM_MODEL qwen3:8b
-npx thepopebot set-var OPENAI_BASE_URL http://host.docker.internal:11434/v1
-```
-
-Most local servers don't need an API key. If yours does, set `AGENT_CUSTOM_API_KEY` as a GitHub secret.
-
-> **Important:** `RUNS_ON=self-hosted` is only needed when the model runs on your machine. Jobs run inside Docker, so use `host.docker.internal` to reach a model server on the host.
+See [docs/RUNNING_DIFFERENT_MODELS.md](docs/RUNNING_DIFFERENT_MODELS.md) for the full guide: Event Handler config, job defaults, per-job overrides, provider table, and custom provider setup.
 
 ---
 
@@ -360,6 +286,7 @@ Most local servers don't need an API key. If yours does, set `AGENT_CUSTOM_API_K
 | [Configuration](docs/CONFIGURATION.md) | Environment variables, GitHub secrets, repo variables, ngrok, Telegram setup |
 | [Customization](docs/CUSTOMIZATION.md) | Personality, skills, operating system files, using your bot, security details |
 | [Chat Integrations](docs/CHAT_INTEGRATIONS.md) | Web chat, Telegram, adding new channels |
+| [Running Different Models](docs/RUNNING_DIFFERENT_MODELS.md) | Event Handler vs job model config, per-job overrides, providers, custom provider |
 | [Auto-Merge](docs/AUTO_MERGE.md) | Auto-merge controls, ALLOWED_PATHS configuration |
 | [Deployment](docs/DEPLOYMENT.md) | VPS setup, Docker Compose, HTTPS with Let's Encrypt |
 | [How to Use Pi](docs/HOW_TO_USE_PI.md) | Guide to the Pi coding agent |
