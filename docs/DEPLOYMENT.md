@@ -15,6 +15,23 @@ npm run build          # Next.js build → generates .next/
 docker-compose up      # Start Traefik + event handler + runner
 ```
 
+### Optional: Add a Local ComfyUI Service Overlay
+
+Default startup remains unchanged. To start an additional local ComfyUI service, use the overlay compose file:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.comfy.yml up -d
+```
+
+Then set:
+
+```bash
+COMFY_ENABLED=true
+COMFY_BASE_URL=http://comfyui:8188
+```
+
+in your `.env` so the event handler can reach the Comfy service by Docker service name.
+
 ## Event Handler Docker Image
 
 The event handler Dockerfile (`templates/docker/event-handler/Dockerfile`) is **not a self-contained application image**. It only provides the Node.js runtime, system dependencies (git, gh, python3, build tools), PM2, and pre-installed `node_modules`. It does **not** contain the Next.js app code and does **not** run `next build`.

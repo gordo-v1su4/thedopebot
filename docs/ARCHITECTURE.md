@@ -93,7 +93,7 @@ All core logic lives in the `thepopebot` NPM package. The user's project contain
 
 ## Event Handler
 
-The Event Handler is a Next.js API route handler that provides orchestration capabilities. All routes are served through a catch-all route (`app/api/[...thepopebot]/route.js`) that re-exports `GET` and `POST` from the `thepopebot/api` package entry point.
+The Event Handler is a Next.js API route handler that provides orchestration capabilities. All routes are served through a catch-all route (`app/api/[...thepopebot]/route.js`) that re-exports `GET`, `POST`, and `DELETE` from the `thepopebot/api` package entry point.
 
 ### API Endpoints
 
@@ -105,6 +105,11 @@ The Event Handler is a Next.js API route handler that provides orchestration cap
 | `/api/telegram/register` | POST | Y | Register Telegram webhook URL |
 | `/api/github/webhook` | POST | N | Receives notifications from GitHub Actions (uses its own secret) |
 | `/api/jobs/status` | GET | Y | Check status of a running job |
+| `/api/comfy/workflows` | GET | Y | Optional (when `COMFY_ENABLED=true`): list Comfy workflow registry |
+| `/api/comfy/workflows/upsert` | POST | Y | Optional: create/update Comfy workflow registry entry |
+| `/api/comfy/workflows?name=...` | DELETE | Y | Optional: delete Comfy workflow registry entry |
+| `/api/comfy/runs` | POST | Y | Optional: queue Comfy run from named or inline workflow |
+| `/api/comfy/runs/status?run_id=...` | GET | Y | Optional: poll Comfy run state + artifacts |
 
 API keys are database-backed and managed via the web UI Settings page. Use the `x-api-key` header for authentication.
 
@@ -140,10 +145,11 @@ curl -X POST https://your-app-url/api/telegram/register \
 
 ### Components
 
-- **`api/index.js`** - Next.js route handlers (GET/POST) for all `/api/*` endpoints
+- **`api/index.js`** - Next.js route handlers (GET/POST/DELETE) for all `/api/*` endpoints
 - **`lib/cron.js`** - Loads CRONS.json and schedules jobs using node-cron
 - **`lib/triggers.js`** - Loads TRIGGERS.json and fires actions when watched paths are hit
 - **`lib/ai/`** - LLM integration (multi-provider chat, streaming, agent, tools)
+- **`lib/comfy/`** - Optional ComfyUI module (client, workflow registry, run orchestration)
 - **`lib/channels/`** - Channel adapter pattern for Telegram (and future channels)
 - **`lib/tools/`** - Job creation, GitHub API, Telegram, and OpenAI utilities
 

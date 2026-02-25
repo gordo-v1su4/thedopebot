@@ -28,8 +28,14 @@ All environment variables for the Event Handler (set in `.env` in your project r
 | `LETSENCRYPT_EMAIL` | Email for Let's Encrypt SSL (docker-compose only) | No |
 | `EVENT_HANDLER_IMAGE_URL` | Custom event handler Docker image | No |
 | `JOB_IMAGE_URL` | Custom job agent Docker image | No |
+| `COMFY_ENABLED` | Enable optional ComfyUI module routes/tools (`true`/`false`) | No (default: `false`) |
+| `COMFY_BASE_URL` | Base URL for self-hosted ComfyUI service (e.g., `http://127.0.0.1:8188`) | Only if `COMFY_ENABLED=true` |
+| `COMFY_API_KEY` | Optional Comfy API key header (`X-API-KEY`) | No |
+| `COMFY_BEARER_TOKEN` | Optional Comfy bearer token (`Authorization`) | No |
 
 API keys for `/api` routes are database-backed and managed via the web UI Settings page. Use the `x-api-key` header for authentication.
+
+When `COMFY_ENABLED=true`, additional authenticated `/api/comfy/*` routes become available for workflow registry and run operations. With `COMFY_ENABLED=false` (default), Comfy routes are disabled and standard thepopebot behavior is unchanged.
 
 ---
 
@@ -42,6 +48,22 @@ Set automatically by the setup wizard:
 | `SECRETS` | Base64-encoded JSON with protected credentials | Yes |
 | `LLM_SECRETS` | Base64-encoded JSON with LLM-accessible credentials | No |
 | `GH_WEBHOOK_SECRET` | Random secret for webhook authentication | Yes |
+
+---
+
+## Comfy Workflow Registry
+
+When Comfy integration is enabled, workflow definitions are stored in:
+
+- `config/COMFY_WORKFLOWS.json`
+
+This file is intended to be committed so workflow definitions are auditable and versioned with the repo.
+
+For local Docker deployments that include the optional Comfy overlay, set:
+
+- `COMFY_BASE_URL=http://comfyui:8188`
+
+because `event-handler` and `comfyui` share the same Docker network.
 
 ---
 
@@ -69,6 +91,12 @@ For self-hosted deployment, build the project and start Docker:
 ```bash
 npm run build
 docker compose up -d
+```
+
+To include the optional Comfy service overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.comfy.yml up -d
 ```
 
 **Important:** The `.next/` build directory must exist before starting the container. If the container starts without a valid build, it will crash-loop until one is available.

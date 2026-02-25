@@ -1,1 +1,1 @@
-export { GET, POST } from 'thepopebot/api';
+export { GET, POST, DELETE } from 'thepopebot/api';

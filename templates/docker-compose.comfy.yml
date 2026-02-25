@@ -1,0 +1,20 @@
+services:
+  comfyui:
+    container_name: thepopebot-comfyui
+    build:
+      context: .
+      dockerfile: docker/comfy/Dockerfile
+    ports:
+      - "8188:8188"
+    volumes:
+      - comfy_models:/opt/comfyui/models
+      - comfy_input:/opt/comfyui/input
+      - comfy_output:/opt/comfyui/output
+      - comfy_custom_nodes:/opt/comfyui/custom_nodes
+    restart: unless-stopped
+
+volumes:
+  comfy_models:
+  comfy_input:
+  comfy_output:
+  comfy_custom_nodes:

@@ -7,6 +7,23 @@ import { chat, summarizeJob } from '../lib/ai/index.js';
 import { createNotification } from '../lib/db/notifications.js';
 import { loadTriggers } from '../lib/triggers.js';
 import { verifyApiKey } from '../lib/db/api-keys.js';
+import {
+  ComfyClientError,
+  isComfyEnabled,
+  getComfyCapabilities,
+  listComfyWorkflows,
+  upsertComfyWorkflow,
+  deleteComfyWorkflow,
+  runComfyWorkflow,
+  getComfyRunStatus,
+} from '../lib/comfy/index.js';
+import {
+  upsertWorkflowRequestSchema,
+  runRequestSchema,
+  runStatusQuerySchema,
+  deleteWorkflowQuerySchema,
+  parseSchema,
+} from '../lib/comfy/schema.js';
 
 // Bot token from env, can be overridden by /telegram/register
 let telegramBotToken = null;
@@ -67,6 +84,16 @@ function checkAuth(routePath, request) {
   }
 
   return null;
+}
+
+function comfyDisabledResponse() {
+  return Response.json(
+    {
+      error: 'ComfyUI integration is disabled. Set COMFY_ENABLED=true to enable /api/comfy routes.',
+      capabilities: getComfyCapabilities(),
+    },
+    { status: 404 }
+  );
 }
 
 /**
@@ -212,6 +239,112 @@ async function handleJobStatus(request) {
   }
 }
 
+async function handleComfyWorkflowUpsert(request) {
+  if (!isComfyEnabled()) return comfyDisabledResponse();
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const parsed = parseSchema(upsertWorkflowRequestSchema, body);
+  if (!parsed.ok) {
+    return Response.json({ error: 'Invalid request body', issues: parsed.error }, { status: 400 });
+  }
+
+  const workflow = upsertComfyWorkflow(parsed.data);
+  return Response.json({ success: true, workflow });
+}
+
+async function handleComfyWorkflowList() {
+  if (!isComfyEnabled()) return comfyDisabledResponse();
+  return Response.json({
+    success: true,
+    workflows: listComfyWorkflows(),
+  });
+}
+
+async function handleComfyWorkflowDelete(request) {
+  if (!isComfyEnabled()) return comfyDisabledResponse();
+
+  const url = new URL(request.url);
+  const query = Object.fromEntries(url.searchParams);
+  const parsed = parseSchema(deleteWorkflowQuerySchema, query);
+  if (!parsed.ok) {
+    return Response.json({ error: 'Invalid query parameters', issues: parsed.error }, { status: 400 });
+  }
+
+  const result = deleteComfyWorkflow(parsed.data.name);
+  if (!result.deleted) {
+    return Response.json({ error: `Workflow "${parsed.data.name}" not found` }, { status: 404 });
+  }
+
+  return Response.json({ success: true, deleted: true, workflow: result.workflow });
+}
+
+async function handleComfyRunCreate(request) {
+  if (!isComfyEnabled()) return comfyDisabledResponse();
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const parsed = parseSchema(runRequestSchema, body);
+  if (!parsed.ok) {
+    return Response.json({ error: 'Invalid request body', issues: parsed.error }, { status: 400 });
+  }
+
+  try {
+    const result = await runComfyWorkflow(parsed.data);
+    return Response.json({ success: true, ...result });
+  } catch (err) {
+    if (err instanceof ComfyClientError) {
+      return Response.json(
+        {
+          error: err.message,
+          code: err.code,
+          details: err.details || null,
+        },
+        { status: err.status || 500 }
+      );
+    }
+
+    console.error('Failed to create Comfy run:', err);
+    return Response.json({ error: 'Failed to create Comfy run' }, { status: 500 });
+  }
+}
+
+async function handleComfyRunStatus(request) {
+  if (!isComfyEnabled()) return comfyDisabledResponse();
+
+  const url = new URL(request.url);
+  const query = Object.fromEntries(url.searchParams);
+  const parsed = parseSchema(runStatusQuerySchema, query);
+  if (!parsed.ok) {
+    return Response.json({ error: 'Invalid query parameters', issues: parsed.error }, { status: 400 });
+  }
+
+  try {
+    const status = await getComfyRunStatus(parsed.data.run_id);
+    return Response.json({ success: true, ...status });
+  } catch (err) {
+    if (err instanceof ComfyClientError) {
+      return Response.json(
+        {
+          error: err.message,
+          code: err.code,
+          details: err.details || null,
+        },
+        { status: err.status || 500 }
+      );
+    }
+
+    console.error('Failed to get Comfy run status:', err);
+    return Response.json({ error: 'Failed to get Comfy run status' }, { status: 500 });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Next.js Route Handlers (catch-all)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -243,6 +376,8 @@ async function POST(request) {
     case '/telegram/webhook':   return handleTelegramWebhook(request);
     case '/telegram/register':  return handleTelegramRegister(request);
     case '/github/webhook':     return handleGithubWebhook(request);
+    case '/comfy/workflows/upsert': return handleComfyWorkflowUpsert(request);
+    case '/comfy/runs':         return handleComfyRunCreate(request);
     default:                    return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -258,8 +393,23 @@ async function GET(request) {
   switch (routePath) {
     case '/ping':           return Response.json({ message: 'Pong!' });
     case '/jobs/status':    return handleJobStatus(request);
+    case '/comfy/workflows': return handleComfyWorkflowList();
+    case '/comfy/runs/status': return handleComfyRunStatus(request);
     default:                return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
 
-export { GET, POST };
+async function DELETE(request) {
+  const url = new URL(request.url);
+  const routePath = url.pathname.replace(/^\/api/, '');
+
+  const authError = checkAuth(routePath, request);
+  if (authError) return authError;
+
+  switch (routePath) {
+    case '/comfy/workflows': return handleComfyWorkflowDelete(request);
+    default:                return Response.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+export { GET, POST, DELETE };
