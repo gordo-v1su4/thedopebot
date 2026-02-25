@@ -11,6 +11,12 @@ const CAPABILITY_DEFS = [
     className: 'border-sky-400/40 bg-sky-500/10 text-sky-300',
   },
   {
+    key: 'supportsVideo',
+    short: 'VID',
+    label: 'Video support',
+    className: 'border-cyan-400/40 bg-cyan-500/10 text-cyan-300',
+  },
+  {
     key: 'supportsImageGeneration',
     short: 'IMG',
     label: 'Image generation',
@@ -91,6 +97,22 @@ function ModelLegend() {
   );
 }
 
+function FilterChip({ active, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center rounded border px-2 py-1 text-[11px] font-medium transition-colors ${
+        active
+          ? 'border-foreground/40 bg-foreground/10 text-foreground'
+          : 'border-border bg-background text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function ChatHeader({ chatId, modelPicker }) {
   const enabled = Boolean(modelPicker?.enabled);
   const isLoading = Boolean(modelPicker?.loading);
@@ -100,6 +122,11 @@ export function ChatHeader({ chatId, modelPicker }) {
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState(() => ({
+    freeOnly: false,
+    paidOnly: false,
+    ...Object.fromEntries(CAPABILITY_DEFS.map((def) => [def.key, false])),
+  }));
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -123,16 +150,48 @@ export function ChatHeader({ chatId, modelPicker }) {
 
   const filteredModels = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return models;
     return models.filter((model) => {
-      return (
-        model.id.toLowerCase().includes(needle) ||
-        String(model.name || '').toLowerCase().includes(needle) ||
-        String(model.provider || '').toLowerCase().includes(needle) ||
-        String(model.description || '').toLowerCase().includes(needle)
-      );
+      if (needle) {
+        const matchesQuery =
+          model.id.toLowerCase().includes(needle) ||
+          String(model.name || '').toLowerCase().includes(needle) ||
+          String(model.provider || '').toLowerCase().includes(needle) ||
+          String(model.description || '').toLowerCase().includes(needle);
+        if (!matchesQuery) return false;
+      }
+
+      if (activeFilters.freeOnly && !model.isFree) return false;
+      if (activeFilters.paidOnly && model.isFree) return false;
+      for (const def of CAPABILITY_DEFS) {
+        if (activeFilters[def.key] && !model[def.key]) return false;
+      }
+      return true;
     });
-  }, [models, query]);
+  }, [models, query, activeFilters]);
+
+  const toggleFilter = (key) => {
+    setActiveFilters((prev) => {
+      if (key === 'freeOnly') {
+        return { ...prev, freeOnly: !prev.freeOnly, paidOnly: false };
+      }
+      if (key === 'paidOnly') {
+        return { ...prev, paidOnly: !prev.paidOnly, freeOnly: false };
+      }
+      return { ...prev, [key]: !prev[key] };
+    });
+  };
+
+  const clearFilters = () => {
+    setActiveFilters({
+      freeOnly: false,
+      paidOnly: false,
+      ...Object.fromEntries(CAPABILITY_DEFS.map((def) => [def.key, false])),
+    });
+  };
+
+  const anyFilterActive = useMemo(() => {
+    return Object.values(activeFilters).some(Boolean);
+  }, [activeFilters]);
 
   const selectModel = (modelId) => {
     modelPicker?.onSelectModel?.(modelId);
@@ -197,6 +256,28 @@ export function ChatHeader({ chatId, modelPicker }) {
 
               <div className="mt-2">
                 <ModelLegend />
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-border/60 bg-muted/20 p-2">
+                {CAPABILITY_DEFS.map((def) => (
+                  <FilterChip
+                    key={def.key}
+                    active={activeFilters[def.key]}
+                    label={def.short}
+                    onClick={() => toggleFilter(def.key)}
+                  />
+                ))}
+                <FilterChip active={activeFilters.freeOnly} label="FREE" onClick={() => toggleFilter('freeOnly')} />
+                <FilterChip active={activeFilters.paidOnly} label="PAID" onClick={() => toggleFilter('paidOnly')} />
+                {anyFilterActive && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="ml-auto text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
 
               <div className="mt-2 max-h-[56vh] overflow-y-auto rounded-md border border-border/60">
