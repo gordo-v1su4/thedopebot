@@ -1,0 +1,194 @@
+# ComfyUI Integration Plan (Optional Module)
+
+## Goals
+
+- Keep the existing thepopebot architecture intact.
+- Add ComfyUI support as an optional module that is disabled by default.
+- Support self-hosted ComfyUI first.
+- Support both:
+  - native API-export workflows
+  - full workflows via optional conversion endpoint (`/workflow/convert`)
+
+## Non-Goals
+
+- Replacing existing job orchestration flow.
+- Requiring ComfyUI for default thepopebot operation.
+- Changing default Docker compose behavior.
+
+## Staged Delivery
+
+### Stage 1: Baseline Preservation
+
+- Set scaffolded UI to dark zinc by default.
+- Add this planning document and wire it into docs index.
+- No runtime Comfy code changes.
+
+### Stage 2: Optional Comfy Runtime
+
+- Add isolated module under `lib/comfy/`.
+- Add optional `/api/comfy/*` routes behind standard API key auth.
+- Add optional AI tools only when Comfy is enabled.
+
+### Stage 3: Optional Local Docker Overlay
+
+- Add a separate compose overlay and Comfy Docker assets.
+- Keep default `docker compose up -d` path unchanged.
+
+## Source-Informed Design Notes
+
+### Official ComfyUI API and events
+
+ComfyUI core server exposes:
+
+- queue + execute: `/prompt` (POST)
+- history: `/history` and `/history/{prompt_id}`
+- queue status: `/queue`
+- interrupt: `/interrupt`
+- output file serving: `/view`
+- websocket updates: `/ws`
+- jobs API: `/api/jobs` and `/api/jobs/{job_id}` on modern builds
+
+ComfyUI also mounts duplicated `/api/*` route prefixes for easier delegation in frontends/reverse proxies.
+
+### Workflow export and conversion reality
+
+- Native "File -> Export (API)" produces the direct prompt payload format.
+- Many users keep full workflows and need server-side conversion.
+- Converter plugins exist and are active:
+  - `SethRobinson/comfyui-workflow-to-api-converter-endpoint`
+- For optional typed workflow contracts, `Ckrest/comfyui-conduit` is promising but early-stage.
+
+Decision:
+
+- Accept API-export payloads directly.
+- Accept full workflows and call `/workflow/convert` if available.
+- Return an actionable error if conversion endpoint is unavailable.
+
+### Output metadata and artifact retrieval
+
+- Comfy output nodes include references that resolve through `/view`.
+- Modern Comfy jobs API provides normalized job status and output summaries.
+- Use `/api/jobs/{prompt_id}` first where available; fallback to `/history/{prompt_id}`.
+
+## Module Architecture
+
+### New module layout
+
+```
+lib/comfy/
+  client.js
+  workflows.js
+  runs.js
+  schema.js
+  index.js
+```
+
+Responsibilities:
+
+- `client.js`: HTTP calls, auth headers, timeout handling, endpoint probing.
+- `workflows.js`: local workflow registry CRUD + format detection.
+- `runs.js`: queue/monitor flow and output normalization.
+- `schema.js`: zod input validation for APIs and tools.
+- `index.js`: façade used by route handlers and AI tools.
+
+## Config and Gating
+
+### Env
+
+- `COMFY_ENABLED` (default: `false`)
+- `COMFY_BASE_URL` (required only when enabled)
+- `COMFY_API_KEY` (optional)
+- `COMFY_BEARER_TOKEN` (optional)
+
+### Workflow registry
+
+- Template file: `templates/config/COMFY_WORKFLOWS.json`
+- Runtime file in scaffolded projects: `config/COMFY_WORKFLOWS.json`
+
+Registry stores named workflow entries and metadata:
+
+- `name`
+- `format` (`api` or `workflow`)
+- `workflow` (JSON object)
+- optional defaults/description
+
+## API Surface (Optional)
+
+All endpoints remain under existing API key auth in `api/index.js`.
+
+- `POST /api/comfy/workflows/upsert`
+- `GET /api/comfy/workflows`
+- `DELETE /api/comfy/workflows?name=...`
+- `POST /api/comfy/runs`
+- `GET /api/comfy/runs/status?run_id=...`
+
+If `COMFY_ENABLED` is false, these routes return disabled/not-found style responses without side effects.
+
+## AI Tool Surface (Optional)
+
+Only registered when `COMFY_ENABLED=true`:
+
+- `comfy_list_workflows`
+- `comfy_run_workflow`
+- `comfy_get_run_status`
+
+## Run Lifecycle
+
+1. Resolve workflow by name or direct payload.
+2. If payload is full workflow:
+   - try `/workflow/convert`
+   - if unavailable, fail with remediation guidance.
+3. Submit to `/prompt`.
+4. Poll `/api/jobs/{prompt_id}` with fallback to `/history/{prompt_id}`.
+5. Normalize outputs (images/video/audio) and build `/view` URLs.
+6. Return structured status (`pending`, `in_progress`, `completed`, `failed`).
+
+## Security and Compatibility
+
+- Reuse existing `x-api-key` gate in thepopebot API router.
+- Never expose Comfy credentials in tool output.
+- Keep feature disabled by default.
+- Keep default deployment and startup paths unchanged.
+- Confine changes to isolated module + minimal integration touchpoints.
+
+## Repository Research Snapshot
+
+Primary references:
+
+- ComfyUI core (`Comfy-Org/ComfyUI`)
+- TS SDKs:
+  - `comfyui-node` (active, TypeScript)
+  - `@saintno/comfyui-sdk` (active, TypeScript)
+- Conversion / adapter ecosystem:
+  - `SethRobinson/comfyui-workflow-to-api-converter-endpoint`
+  - `Ckrest/comfyui-conduit`
+  - `pydn/ComfyUI-to-Python-Extension`
+
+Decision for phase 1/2:
+
+- Implement an in-house adapter for control and minimal dependency risk.
+- Keep migration path open if SDK adoption becomes valuable later.
+
+## Test Matrix
+
+1. `COMFY_ENABLED=false`:
+   - no Comfy tool registration
+   - `/api/comfy/*` disabled behavior
+   - existing routes unchanged
+2. `COMFY_ENABLED=true`, API-format workflow:
+   - queue success
+   - status transitions
+   - artifact URLs resolve
+3. Full workflow with converter installed:
+   - conversion success
+   - run success
+4. Full workflow without converter:
+   - explicit error + remediation
+5. Auth:
+   - missing/invalid `x-api-key` rejected for `/api/comfy/*`
+
+## Rollout
+
+- Merge Stage 1 first.
+- Merge Stage 2 behind default-off flag.
+- Stage 3 overlay is optional and can ship later without impacting defaults.
