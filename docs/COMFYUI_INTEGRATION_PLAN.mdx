@@ -32,6 +32,8 @@
 ### Stage 3: Optional Local Docker Overlay
 
 - Add a separate compose overlay and Comfy Docker assets.
+  - `templates/docker-compose.comfy.yml`
+  - `templates/docker/comfy/Dockerfile`
 - Keep default `docker compose up -d` path unchanged.
 
 ## Source-Informed Design Notes
@@ -48,7 +50,7 @@ ComfyUI core server exposes:
 - websocket updates: `/ws`
 - jobs API: `/api/jobs` and `/api/jobs/{job_id}` on modern builds
 
-ComfyUI also mounts duplicated `/api/*` route prefixes for easier delegation in frontends/reverse proxies.
+The official docs focus on base paths like `/prompt`, `/history`, and `/queue`, while core server code also exposes `/api/jobs` routes for richer job polling.
 
 ### Workflow export and conversion reality
 
@@ -153,16 +155,21 @@ Only registered when `COMFY_ENABLED=true`:
 
 ## Repository Research Snapshot
 
+Validated on **February 25, 2026**.
+
 Primary references:
 
-- ComfyUI core (`Comfy-Org/ComfyUI`)
-- TS SDKs:
-  - `comfyui-node` (active, TypeScript)
-  - `@saintno/comfyui-sdk` (active, TypeScript)
+- ComfyUI core:
+  - [`Comfy-Org/ComfyUI`](https://github.com/Comfy-Org/ComfyUI)
+  - server routes in [`server.py`](https://github.com/Comfy-Org/ComfyUI/blob/master/server.py)
+  - docs route reference: [docs.comfy.org/development/comfyui-server/comms_routes](https://docs.comfy.org/development/comfyui-server/comms_routes)
+- TypeScript SDKs (ecosystem):
+  - [`comfy-addons/comfyui-sdk`](https://github.com/comfy-addons/comfyui-sdk)
+  - [`zandko/comfyui-sdk`](https://github.com/zandko/comfyui-sdk)
 - Conversion / adapter ecosystem:
-  - `SethRobinson/comfyui-workflow-to-api-converter-endpoint`
-  - `Ckrest/comfyui-conduit`
-  - `pydn/ComfyUI-to-Python-Extension`
+  - [`SethRobinson/comfyui-workflow-to-api-converter-endpoint`](https://github.com/SethRobinson/comfyui-workflow-to-api-converter-endpoint)
+  - [`Ckrest/comfyui-conduit`](https://github.com/Ckrest/comfyui-conduit)
+  - [`pydn/ComfyUI-to-Python-Extension`](https://github.com/pydn/ComfyUI-to-Python-Extension)
 
 Decision for phase 1/2:
 
