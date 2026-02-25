@@ -5,6 +5,11 @@ PACKAGE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DEV_DIR="${1:-/tmp/thepopebot.local}"
 ENV_BACKUP="/tmp/env.$(uuidgen)"
 
+# Build local package artifacts so file-linked installs can resolve
+# lib/chat/components/*.js exports during Next.js dev/build.
+echo "Building local package artifacts..."
+(cd "$PACKAGE_DIR" && npm run build >/dev/null)
+
 HAS_ENV=false
 if [ -f "$DEV_DIR/.env" ]; then
   mv "$DEV_DIR/.env" "$ENV_BACKUP"
