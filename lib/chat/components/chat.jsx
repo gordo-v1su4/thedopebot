@@ -7,21 +7,101 @@ import { Messages } from './messages.js';
 import { ChatInput } from './chat-input.js';
 import { ChatHeader } from './chat-header.js';
 import { Greeting } from './greeting.js';
-import { getChatModelInfo } from '../actions.js';
+import { getOpenRouterModels, getChatModelInfo } from '../actions.js';
 
 export function Chat({ chatId, initialMessages = [] }) {
   const [input, setInput] = useState('');
   const [files, setFiles] = useState([]);
-  const [activeModelLabel, setActiveModelLabel] = useState('');
+  const [modelCatalog, setModelCatalog] = useState(null);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelError, setModelError] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [defaultModelLabel, setDefaultModelLabel] = useState('');
   const hasNavigated = useRef(false);
+
+  const loadModelCatalog = useCallback(async (forceRefresh = false) => {
+    try {
+      setModelsLoading(true);
+      const catalog = await getOpenRouterModels({ forceRefresh });
+      setModelCatalog(catalog);
+      setModelError(catalog?.error || '');
+
+      if (!catalog?.enabled || !Array.isArray(catalog.models) || catalog.models.length === 0) {
+        setSelectedModel('');
+        return;
+      }
+
+      const availableModels = new Set(catalog.models.map((m) => m.id));
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('thepopebot:selected-model') : null;
+
+      let nextModel = '';
+      if (saved && availableModels.has(saved)) {
+        nextModel = saved;
+      } else if (catalog.recommendedModel && availableModels.has(catalog.recommendedModel)) {
+        nextModel = catalog.recommendedModel;
+      } else if (catalog.defaultModel && availableModels.has(catalog.defaultModel)) {
+        nextModel = catalog.defaultModel;
+      } else {
+        nextModel = catalog.models[0].id;
+      }
+
+      setSelectedModel(nextModel);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('thepopebot:selected-model', nextModel);
+      }
+    } catch (err) {
+      setModelError(err.message || 'Failed to load OpenRouter models.');
+      setModelCatalog({ enabled: false, models: [] });
+      setSelectedModel('');
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadModelCatalog(false);
+  }, [loadModelCatalog]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getChatModelInfo()
+      .then((info) => {
+        if (!cancelled) {
+          setDefaultModelLabel(info?.label || '');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDefaultModelLabel('');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeModelLabel = useMemo(() => {
+    if (modelCatalog?.enabled && selectedModel) {
+      const provider = modelCatalog?.provider || 'openai';
+      return `${provider}/${selectedModel}`;
+    }
+    return defaultModelLabel;
+  }, [modelCatalog?.enabled, modelCatalog?.provider, selectedModel, defaultModelLabel]);
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/stream/chat',
-        body: { chatId },
+        body:
+          modelCatalog?.enabled && selectedModel
+            ? {
+                chatId,
+                llmProvider: modelCatalog?.provider || 'openai',
+                llmModel: selectedModel,
+              }
+            : { chatId },
       }),
-    [chatId]
+    [chatId, modelCatalog?.enabled, modelCatalog?.provider, selectedModel]
   );
 
   const {
@@ -49,24 +129,6 @@ export function Chat({ chatId, initialMessages = [] }) {
       setTimeout(() => window.dispatchEvent(new Event('chatsupdated')), 5000);
     }
   }, [messages.length, status, chatId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    getChatModelInfo()
-      .then((info) => {
-        if (!cancelled) {
-          setActiveModelLabel(info?.label || '');
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setActiveModelLabel('');
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleSend = () => {
     if (!input.trim() && files.length === 0) return;
@@ -122,13 +184,35 @@ export function Chat({ chatId, initialMessages = [] }) {
     sendMessage({ text: newText });
   }, [messages, setMessages, sendMessage]);
 
+  const handleSelectModel = useCallback((modelId) => {
+    setSelectedModel(modelId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('thepopebot:selected-model', modelId);
+    }
+  }, []);
+
   return (
     <div className="flex h-svh flex-col">
-      <ChatHeader chatId={chatId} />
+      <ChatHeader
+        chatId={chatId}
+        modelPicker={{
+          enabled: Boolean(modelCatalog?.enabled),
+          loading: modelsLoading,
+          models: modelCatalog?.models || [],
+          selectedModel,
+          onSelectModel: handleSelectModel,
+          onRefresh: () => loadModelCatalog(true),
+        }}
+      />
       {messages.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center px-4 md:px-6">
           <div className="w-full max-w-4xl">
             <Greeting />
+            {modelError && (
+              <div className="mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-xs text-yellow-300">
+                {modelError}
+              </div>
+            )}
             {error && (
               <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
                 {error.message || 'Something went wrong. Please try again.'}
@@ -157,6 +241,13 @@ export function Chat({ chatId, initialMessages = [] }) {
             onEdit={handleEdit}
             activeModelLabel={activeModelLabel}
           />
+          {modelError && (
+            <div className="mx-auto w-full max-w-4xl px-2 md:px-4">
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-xs text-yellow-300">
+                {modelError}
+              </div>
+            </div>
+          )}
           {error && (
             <div className="mx-auto w-full max-w-4xl px-2 md:px-4">
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
