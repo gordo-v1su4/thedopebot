@@ -237,12 +237,12 @@ async function main() {
 
       try {
         const url = remoteUrl.replace(/\/$/, '').replace(/\.git$/, '') + '.git';
-        execSync(`git remote add origin ${url}`, { stdio: 'ignore' });
+        execSync(`git remote add origin "${url}"`, { stdio: 'ignore' });
         remoteAdded = true;
       } catch {
         try {
           const url = remoteUrl.replace(/\/$/, '').replace(/\.git$/, '') + '.git';
-          execSync(`git remote set-url origin ${url}`, { stdio: 'ignore' });
+          execSync(`git remote set-url origin "${url}"`, { stdio: 'ignore' });
           remoteAdded = true;
         } catch {
           clack.log.error('Failed to set remote. Try again.');
@@ -355,7 +355,7 @@ async function main() {
     let pushed = false;
     while (!pushed) {
       const authedUrl = remote.replace('https://github.com/', `https://x-access-token:${pat}@github.com/`);
-      execSync(`git remote set-url origin ${authedUrl}`, { stdio: 'ignore' });
+      execSync(`git remote set-url origin "${authedUrl}"`, { stdio: 'ignore' });
 
       const pushSpinner = clack.spinner();
       pushSpinner.start('Pushing to GitHub...');
@@ -368,7 +368,7 @@ async function main() {
         pushSpinner.stop('Failed to push');
         const output = (err.stdout || '') + (err.stderr || '');
         if (output) clack.log.error(output.trim());
-        execSync(`git remote set-url origin ${remote}`, { stdio: 'ignore' });
+        execSync(`git remote set-url origin "${remote}"`, { stdio: 'ignore' });
         clack.log.info('Your PAT may not have write access to this repository.');
         pat = await promptForPAT();
         collected.GH_TOKEN = pat;
@@ -376,7 +376,7 @@ async function main() {
       }
 
       // Reset remote URL back to clean HTTPS (no token embedded)
-      execSync(`git remote set-url origin ${remote}`, { stdio: 'ignore' });
+      execSync(`git remote set-url origin "${remote}"`, { stdio: 'ignore' });
     }
   }
 

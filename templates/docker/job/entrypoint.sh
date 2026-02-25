@@ -12,13 +12,13 @@ echo "Job ID: ${JOB_ID}"
 # Export SECRETS (JSON) as flat env vars (GH_TOKEN, ANTHROPIC_API_KEY, etc.)
 # These are filtered from LLM's bash subprocess by env-sanitizer extension
 if [ -n "$SECRETS" ]; then
-    eval $(echo "$SECRETS" | jq -r 'to_entries | .[] | "export \(.key)=\"\(.value)\""')
+    eval $(echo "$SECRETS" | jq -r 'to_entries | .[] | "export \(.key)=\(.value | @sh)"')
 fi
 
 # Export LLM_SECRETS (JSON) as flat env vars
 # These are NOT filtered - LLM can access these (browser logins, skill API keys, etc.)
 if [ -n "$LLM_SECRETS" ]; then
-    eval $(echo "$LLM_SECRETS" | jq -r 'to_entries | .[] | "export \(.key)=\"\(.value)\""')
+    eval $(echo "$LLM_SECRETS" | jq -r 'to_entries | .[] | "export \(.key)=\(.value | @sh)"')
 fi
 
 # Git setup - derive identity from GitHub token

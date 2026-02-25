@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -400,7 +400,7 @@ function copyDirSyncForce(src, dest, templateRelBase = '') {
 function setup() {
   const setupScript = path.join(__dirname, '..', 'setup', 'setup.mjs');
   try {
-    execSync(`node ${setupScript}`, { stdio: 'inherit', cwd: process.cwd() });
+    execFileSync(process.execPath, [setupScript], { stdio: 'inherit', cwd: process.cwd() });
   } catch {
     process.exit(1);
   }
@@ -409,7 +409,7 @@ function setup() {
 function setupTelegram() {
   const setupScript = path.join(__dirname, '..', 'setup', 'setup-telegram.mjs');
   try {
-    execSync(`node ${setupScript}`, { stdio: 'inherit', cwd: process.cwd() });
+    execFileSync(process.execPath, [setupScript], { stdio: 'inherit', cwd: process.cwd() });
   } catch {
     process.exit(1);
   }
