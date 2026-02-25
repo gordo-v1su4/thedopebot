@@ -22,7 +22,10 @@ cd "$DEV_DIR"
 
 node "$PACKAGE_DIR/bin/cli.js" init
 
-sed -i '' "s|\"thepopebot\": \".*\"|\"thepopebot\": \"file:$PACKAGE_DIR\"|" package.json
+# Install from a packed tarball instead of file: symlinks, which can break
+# Next.js/Turbopack module resolution in some local environments.
+PACKAGE_TGZ="$(npm pack "$PACKAGE_DIR" --silent)"
+node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.dependencies.thepopebot='file:${PACKAGE_TGZ}';fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');"
 
 rm -rf node_modules package-lock.json
 npm install --install-links
