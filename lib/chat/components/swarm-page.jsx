@@ -70,7 +70,13 @@ function SwarmWorkflowList({ runs }) {
         const isQueued = run.status === 'queued';
 
         return (
-          <div key={run.run_id} className="flex items-center gap-3 py-3 px-1">
+          <a
+            key={run.run_id}
+            href={run.html_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-md hover:bg-accent transition-colors no-underline text-inherit"
+          >
             {/* Status indicator */}
             {isRunning && (
               <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-green-500 animate-pulse" />
@@ -103,18 +109,11 @@ function SwarmWorkflowList({ runs }) {
             {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Link */}
-            {run.html_url && (
-              <a
-                href={run.html_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-500 hover:underline shrink-0"
-              >
-                View
-              </a>
-            )}
-          </div>
+            {/* Link label */}
+            <span className="text-xs text-blue-500 shrink-0">
+              View
+            </span>
+          </a>
         );
       })}
     </div>
