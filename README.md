@@ -285,6 +285,7 @@ See [docs/RUNNING_DIFFERENT_MODELS.md](docs/RUNNING_DIFFERENT_MODELS.md) for the
 | [Customization](docs/CUSTOMIZATION.md) | Personality, skills, operating system files, using your bot, security details |
 | [Chat Integrations](docs/CHAT_INTEGRATIONS.md) | Web chat, Telegram, adding new channels |
 | [Running Different Models](docs/RUNNING_DIFFERENT_MODELS.md) | Event Handler vs job model config, per-job overrides, providers, custom provider |
+| [ComfyUI Integration Plan](docs/COMFYUI_INTEGRATION_PLAN.mdx) | Optional ComfyUI module architecture, staged rollout, API/tool contracts, and validation strategy |
 | [Auto-Merge](docs/AUTO_MERGE.md) | Auto-merge controls, ALLOWED_PATHS configuration |
 | [Deployment](docs/DEPLOYMENT.md) | VPS setup, Docker Compose, HTTPS with Let's Encrypt |
 | [How to Use Pi](docs/HOW_TO_USE_PI.md) | Guide to the Pi coding agent |
