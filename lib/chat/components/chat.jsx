@@ -67,10 +67,10 @@ export function Chat({ chatId, initialMessages = [] }) {
         api: '/stream/chat',
         body:
           modelCatalog?.enabled && selectedModel
-            ? { chatId, llmProvider: 'custom', llmModel: selectedModel }
+            ? { chatId, llmProvider: modelCatalog.provider || 'openai', llmModel: selectedModel }
             : { chatId },
       }),
-    [chatId, modelCatalog?.enabled, selectedModel]
+    [chatId, modelCatalog?.enabled, modelCatalog?.provider, selectedModel]
   );
 
   const {
