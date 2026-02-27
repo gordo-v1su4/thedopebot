@@ -160,6 +160,12 @@ export function Chat({ chatId, initialMessages = [] }) {
     }
   }, []);
 
+  const activeModel = useMemo(() => {
+    if (modelCatalog?.enabled && selectedModel) return selectedModel;
+    if (modelCatalog?.defaultModel) return modelCatalog.defaultModel;
+    return '';
+  }, [modelCatalog?.enabled, modelCatalog?.defaultModel, selectedModel]);
+
   return (
     <div className="flex h-svh flex-col">
       <ChatHeader
@@ -196,13 +202,20 @@ export function Chat({ chatId, initialMessages = [] }) {
                 stop={stop}
                 files={files}
                 setFiles={setFiles}
+                activeModel={activeModel}
               />
             </div>
           </div>
         </div>
       ) : (
         <>
-          <Messages messages={messages} status={status} onRetry={handleRetry} onEdit={handleEdit} />
+          <Messages
+            messages={messages}
+            status={status}
+            onRetry={handleRetry}
+            onEdit={handleEdit}
+            activeModel={activeModel}
+          />
           {modelError && (
             <div className="mx-auto w-full max-w-4xl px-2 md:px-4">
               <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-xs text-yellow-300">
@@ -225,6 +238,7 @@ export function Chat({ chatId, initialMessages = [] }) {
             stop={stop}
             files={files}
             setFiles={setFiles}
+            activeModel={activeModel}
           />
         </>
       )}
