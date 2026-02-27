@@ -7,10 +7,12 @@ import { Messages } from './messages.js';
 import { ChatInput } from './chat-input.js';
 import { ChatHeader } from './chat-header.js';
 import { Greeting } from './greeting.js';
+import { getChatModelInfo } from '../actions.js';
 
 export function Chat({ chatId, initialMessages = [] }) {
   const [input, setInput] = useState('');
   const [files, setFiles] = useState([]);
+  const [activeModelLabel, setActiveModelLabel] = useState('');
   const hasNavigated = useRef(false);
 
   const transport = useMemo(
@@ -47,6 +49,24 @@ export function Chat({ chatId, initialMessages = [] }) {
       setTimeout(() => window.dispatchEvent(new Event('chatsupdated')), 5000);
     }
   }, [messages.length, status, chatId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getChatModelInfo()
+      .then((info) => {
+        if (!cancelled) {
+          setActiveModelLabel(info?.label || '');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActiveModelLabel('');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSend = () => {
     if (!input.trim() && files.length === 0) return;
@@ -123,13 +143,20 @@ export function Chat({ chatId, initialMessages = [] }) {
                 stop={stop}
                 files={files}
                 setFiles={setFiles}
+                activeModelLabel={activeModelLabel}
               />
             </div>
           </div>
         </div>
       ) : (
         <>
-          <Messages messages={messages} status={status} onRetry={handleRetry} onEdit={handleEdit} />
+          <Messages
+            messages={messages}
+            status={status}
+            onRetry={handleRetry}
+            onEdit={handleEdit}
+            activeModelLabel={activeModelLabel}
+          />
           {error && (
             <div className="mx-auto w-full max-w-4xl px-2 md:px-4">
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
@@ -145,6 +172,7 @@ export function Chat({ chatId, initialMessages = [] }) {
             stop={stop}
             files={files}
             setFiles={setFiles}
+            activeModelLabel={activeModelLabel}
           />
         </>
       )}

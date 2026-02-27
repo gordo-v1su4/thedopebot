@@ -37,7 +37,7 @@ function getEffectiveType(file) {
   return extMap[ext] || file.type || 'text/plain';
 }
 
-export function ChatInput({ input, setInput, onSubmit, status, stop, files, setFiles }) {
+export function ChatInput({ input, setInput, onSubmit, status, stop, files, setFiles, activeModelLabel }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -117,6 +117,11 @@ export function ChatInput({ input, setInput, onSubmit, status, stop, files, setF
   return (
     <div className="mx-auto w-full max-w-4xl px-4 pb-4 md:px-6">
       <form onSubmit={handleSubmit} className="relative">
+        {activeModelLabel && (
+          <div className="mb-2 px-1 text-[11px] text-muted-foreground">
+            Active model: <span className="font-mono">{activeModelLabel}</span>
+          </div>
+        )}
         <div
           className={cn(
             'flex flex-col rounded-xl border bg-muted p-2 transition-colors',

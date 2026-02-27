@@ -5,7 +5,7 @@ import { PreviewMessage, ThinkingMessage } from './message.js';
 import { Greeting } from './greeting.js';
 import { ArrowDown } from 'lucide-react';
 
-export function Messages({ messages, status, onRetry, onEdit }) {
+export function Messages({ messages, status, onRetry, onEdit, activeModelLabel }) {
   const containerRef = useRef(null);
   const endRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -54,7 +54,16 @@ export function Messages({ messages, status, onRetry, onEdit }) {
             />
           ))}
 
-          {status === 'submitted' && <ThinkingMessage />}
+          {status === 'submitted' && (
+            <>
+              <ThinkingMessage />
+              {activeModelLabel && (
+                <div className="text-center text-xs text-muted-foreground">
+                  Responding with <span className="font-mono">{activeModelLabel}</span>
+                </div>
+              )}
+            </>
+          )}
 
           <div className="min-h-[24px] shrink-0" ref={endRef} />
         </div>
